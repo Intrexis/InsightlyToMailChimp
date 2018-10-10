@@ -15,6 +15,10 @@ namespace InsightlyToMailChimp.Services
     {
         #region Fields
 
+        private const int MaxInsightlyContactsPerRequest = 500;
+
+        private const string GetContactsAction = "Contacts";
+
         private readonly string _insightlyApi = ConfigurationManager.AppSettings["InsightlyApi"];
 
         private readonly Dictionary<string, string> _requestHeaders = new Dictionary<string, string>
@@ -62,10 +66,20 @@ namespace InsightlyToMailChimp.Services
         /// <returns></returns>
         private async Task<List<InsightlyContact>> GetContacts(List<string> existedEmails)
         {
-            var contacts = await InsightlyGetRequest<List<InsightlyContact>>("Contacts", "?brief=false&top=10000&count_total=false");
+            var allContacts = new List<InsightlyContact>();
+
+            List<InsightlyContact> contacts = new List<InsightlyContact>();
+
+            do
+            {
+                contacts.Clear();
+                contacts = await InsightlyGetRequest<List<InsightlyContact>>(GetContactsAction, $"?brief=false&top={MaxInsightlyContactsPerRequest}&skip={allContacts.Count}");
+                allContacts.AddRange(contacts);
+            }
+            while(contacts.Any());
 
             // filter contacts by existed email and branch
-            contacts = contacts
+            allContacts = allContacts
                 .Where(c => !string.IsNullOrWhiteSpace(c.EmailAddress)
                             && !string.IsNullOrWhiteSpace(c.FirstName)
                             && !string.IsNullOrWhiteSpace(c.LastName)
@@ -75,7 +89,7 @@ namespace InsightlyToMailChimp.Services
                 .ThenBy(c => c.LastName)
                 .ToList();
 
-            return contacts;
+            return allContacts;
         }
 
         private async Task<T> InsightlyGetRequest<T>(string action, string parameters)

@@ -4,7 +4,7 @@ namespace InsightlyToMailChimp.Core.Models.InsightlyModels
 {
     public class CustomFields
     {
-        [JsonProperty("CUSTOM_FIELD_ID")]
+        [JsonProperty("FIELD_NAME")]
         public string CustomFieldId { get; set; }
 
         [JsonProperty("FIELD_VALUE")]
